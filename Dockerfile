@@ -1,11 +1,10 @@
 FROM alpine:3.9
 
-MAINTAINER Joao Gilberto Magalhaes
-
 WORKDIR /var/www/html
 
 ENV NGINX_VERSION 1.19.6
 ENV MORE_SET_HEADER_VERSION 0.33
+ENV HTTP_REDIS_VERSION 0.3.9
 
 RUN mkdir -p /var/www/html \
     && GPG_KEYS=B0F4253373F8F6F510D42178520A9993A1C052F8 \
@@ -54,6 +53,7 @@ RUN mkdir -p /var/www/html \
         --with-file-aio \
         --with-http_v2_module \
         --add-module=/tmp/headers-more-nginx-module-$MORE_SET_HEADER_VERSION \
+        --add-module=/usr/src/ngx_http_redis-$HTTP_REDIS_VERSION \
     " \
     && addgroup -S nginx \
     && adduser -D -S -h /var/cache/nginx -s /sbin/nologin -G nginx nginx \
@@ -75,6 +75,7 @@ RUN mkdir -p /var/www/html \
     && tar xvf $MORE_SET_HEADER_VERSION.tar.gz \
     && curl -fSL http://nginx.org/download/nginx-$NGINX_VERSION.tar.gz -o nginx.tar.gz \
     && curl -fSL http://nginx.org/download/nginx-$NGINX_VERSION.tar.gz.asc  -o nginx.tar.gz.asc \
+    && curl -fSL https://people.freebsd.org/~osa/ngx_http_redis-$HTTP_REDIS_VERSION.tar.gz -o ngx_http_redis.tar.gz \
     && export GNUPGHOME="$(mktemp -d)" \
     && found=''; \
     for server in \
@@ -94,6 +95,8 @@ RUN mkdir -p /var/www/html \
     && mkdir -p /usr/src \
     && tar -zxC /usr/src -f nginx.tar.gz \
     && rm nginx.tar.gz \
+    && tar -zxC /usr/src -f ngx_http_redis.tar.gz \
+    && rm ngx_http_redis.tar.gz \
     && cd /usr/src/nginx-$NGINX_VERSION \
     && ./configure $CONFIG --with-debug \
     && make -j$(getconf _NPROCESSORS_ONLN) \
@@ -119,6 +122,7 @@ RUN mkdir -p /var/www/html \
     && strip /usr/sbin/nginx* \
     && strip /usr/lib/nginx/modules/*.so \
     && rm -rf /usr/src/nginx-$NGINX_VERSION \
+    && rm -rf /usr/src/ngx_http_redis-$HTTP_REDIS_VERSION \
     \
     # Bring in gettext so we can get `envsubst`, then throw
     # the rest away. To do this, we need to install `gettext`
